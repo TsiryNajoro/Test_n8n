@@ -1,0 +1,5 @@
+- name: Trigger n8n deployment
+  run: |
+    curl -X POST https://prescribe-whinny-species.ngrok-free.dev/home/workflows/webhook/deploy-image \
+      -H "Content-Type: application/json" \
+      -d '{"tag": "${{ github.sha }}"}'
