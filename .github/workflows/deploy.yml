@@ -25,6 +25,6 @@ jobs:
 
       - name: Trigger n8n deployment
         run: |
-          curl -X POST https://ngrok-free.dev \
+          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy-image \
             -H "Content-Type: application/json" \
             -d '{"tag": "${{ github.sha }}"}'
