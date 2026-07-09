@@ -15,11 +15,14 @@ jobs:
 
       - name: Build and push image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
-          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+          # Convert the repository path to lowercase
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          
+          docker build -t ghcr.io/${REPO_LOWER}:${{ github.sha }} .
+          docker push ghcr.io/${REPO_LOWER}:${{ github.sha }}
 
       - name: Trigger n8n deployment
         run: |
-          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/home/workflows/webhook/deploy-image \
+          curl -X POST https://ngrok-free.dev \
             -H "Content-Type: application/json" \
             -d '{"tag": "${{ github.sha }}"}'
