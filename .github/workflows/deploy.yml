@@ -7,6 +7,10 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Add these permissions to allow publishing to GHCR
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
@@ -15,9 +19,7 @@ jobs:
 
       - name: Build and push image
         run: |
-          # Convert the repository path to lowercase
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          
           docker build -t ghcr.io/${REPO_LOWER}:${{ github.sha }} .
           docker push ghcr.io/${REPO_LOWER}:${{ github.sha }}
 
