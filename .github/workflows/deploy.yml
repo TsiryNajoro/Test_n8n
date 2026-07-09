@@ -1,30 +1,27 @@
 name: Trigger n8n Deployment
-
 on:
   # Pour les tests manuels
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag de l'image à déployer'
+        description: "Tag de l'image à déployer"
         required: true
         default: 'latest'
         type: string
-  
+
   # Pour les pushes sur la branche main (pour tester)
   push:
     branches:
       - main
-  
-  # Pour les nouveaux packages (corrigé)
+
+  # Pour les nouveaux packages
   registry_package:
     types: [published]
-    branches:
-      - main
 
 jobs:
   deploy:
     runs-on: self-hosted
-    
+
     steps:
       - name: Get tag
         id: get_tag
@@ -37,16 +34,16 @@ jobs:
             TAG="${{ github.event.package.package_version.metadata.container.tags[0] }}"
             echo "tag=$TAG" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Send webhook to n8n
         run: |
           TAG="${{ steps.get_tag.outputs.tag }}"
           echo "📦 Déploiement du tag: $TAG"
-          
+
           curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy \
             -H "Content-Type: application/json" \
             -d '{
               "tag": "'"$TAG"'"
             }'
-          
+
           echo "✅ Webhook envoyé à n8n"
