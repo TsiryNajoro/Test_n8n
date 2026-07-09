@@ -3,21 +3,20 @@ name: Trigger n8n Deployment
 on:
   registry_package:
     types: [published]
-  
 
 jobs:
   deploy:
     runs-on: self-hosted
-    
+
     steps:
       - name: Send webhook to n8n
         run: |
           IMAGE_NAME="${{ github.event.package.name }}"
           TAG="${{ github.event.package.package_version.metadata.container.tags[0] }}"
-          
+
           echo "Nouvelle image détectée : $IMAGE_NAME:$TAG"
-          
-          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy\
+
+          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy \
             -H "Content-Type: application/json" \
             -d '{
               "image": "'"$IMAGE_NAME"'",
@@ -25,5 +24,5 @@ jobs:
               "repository": "'"${{ github.repository }}"'",
               "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"
             }'
-          
+
           echo "✅ Webhook envoyé à n8n"
