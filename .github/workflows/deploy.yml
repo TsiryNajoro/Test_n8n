@@ -1,30 +1,29 @@
-name: Build and Deploy
+name: Trigger n8n Deployment
 
 on:
-  push:
-    branches: [main]
+  registry_package:
+    types: [published]
+  
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    # Add these permissions to allow publishing to GHCR
-    permissions:
-      contents: read
-      packages: write
+  deploy:
+    runs-on: self-hosted
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build and push image
+      - name: Send webhook to n8n
         run: |
-          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/${REPO_LOWER}:${{ github.sha }} .
-          docker push ghcr.io/${REPO_LOWER}:${{ github.sha }}
-
-      - name: Trigger n8n deployment
-        run: |
-          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy-image \
+          IMAGE_NAME="${{ github.event.package.name }}"
+          TAG="${{ github.event.package.package_version.metadata.container.tags[0] }}"
+          
+          echo "Nouvelle image détectée : $IMAGE_NAME:$TAG"
+          
+          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy\
             -H "Content-Type: application/json" \
-            -d '{"tag": "${{ github.sha }}"}'
+            -d '{
+              "image": "'"$IMAGE_NAME"'",
+              "tag": "'"$TAG"'",
+              "repository": "'"${{ github.repository }}"'",
+              "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"
+            }'
+          
+          echo "✅ Webhook envoyé à n8n"
