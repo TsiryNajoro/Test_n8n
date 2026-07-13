@@ -3,10 +3,18 @@ pipeline {
 
     stages {
 
-        stage('Test') {
+        stage('Build Docker Image') {
             steps {
-                sh 'ls -la'
-                echo 'Code récupéré avec succès 🚀'
+                sh '''
+                    docker build \
+                    -t test_n8n:${BUILD_NUMBER} .
+                '''
+            }
+        }
+
+        stage('Check Image') {
+            steps {
+                sh 'docker images | grep test_n8n'
             }
         }
     }
