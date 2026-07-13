@@ -8,7 +8,31 @@ jobs:
   deploy:
     runs-on: self-hosted
 
+    permissions:
+      packages: read
+
     steps:
-      - name: Debug package event
+
+      - name: Get package version
+        id: package
         run: |
-          echo '${{ toJson(github.event) }}'
+          VERSION_ID="${{ github.event.registry_package.package_version.id }}"
+
+          echo "Version ID: $VERSION_ID"
+
+          TAG=$(curl -s \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/user/packages/container/test_n8n/versions/$VERSION_ID \
+          | jq -r '.metadata.container.tags[0]')
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Trigger n8n deployment
+        run: |
+          TAG="${{ steps.package.outputs.tag }}"
+
+          echo "📦 Déploiement du tag : $TAG"
+
+          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy \
+            -H "Content-Type: application/json" \
+            -d "{\"tag\":\"$TAG\"}"
