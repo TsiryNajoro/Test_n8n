@@ -1,46 +1,69 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "ghcr.io/tsirynajoro/test_n8n"
+    }
+
     stages {
 
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build \
-                    -t test_n8n:${BUILD_NUMBER} .
+                docker build -t test_n8n:${BUILD_NUMBER} .
                 '''
             }
         }
 
-        stage('Push Docker Image') {
+
+        stage('Login GHCR') {
             steps {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'ghcr-token',
-                        usernameVariable: 'GH_USER',
-                        passwordVariable: 'GH_TOKEN'
+                        usernameVariable: 'GHCR_USER',
+                        passwordVariable: 'GHCR_TOKEN'
                     )
                 ]) {
 
                     sh '''
-                        echo $GH_TOKEN | docker login ghcr.io \
-                        -u $GH_USER \
-                        --password-stdin
-
-                        docker tag test_n8n:${BUILD_NUMBER} \
-                        ghcr.io/tsirynajoro/test_n8n:${BUILD_NUMBER}
-
-                        docker push \
-                        ghcr.io/tsirynajoro/test_n8n:${BUILD_NUMBER}
+                    echo $GHCR_TOKEN | docker login ghcr.io \
+                    -u $GHCR_USER \
+                    --password-stdin
                     '''
+
                 }
             }
         }
 
-        stage('Check Image') {
+
+        stage('Tag Image') {
             steps {
-                sh 'docker images | grep test_n8n'
+                sh '''
+                docker tag \
+                test_n8n:${BUILD_NUMBER} \
+                ${IMAGE_NAME}:${BUILD_NUMBER}
+                '''
             }
         }
+
+
+        stage('Push Image') {
+            steps {
+                sh '''
+                docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                '''
+            }
+        }
+
+
+        stage('Check Image') {
+            steps {
+                sh '''
+                docker images | grep test_n8n
+                '''
+            }
+        }
+
     }
 }
