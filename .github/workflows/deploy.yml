@@ -6,10 +6,12 @@ on:
 
 concurrency:
   group: deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.event.registry_package.package_version.container_metadata.tag.name != ''
+
     runs-on: self-hosted
 
     permissions:
@@ -20,27 +22,14 @@ jobs:
       - name: Get package version
         id: package
         run: |
-          VERSION_ID="${{ github.event.registry_package.package_version.id }}"
-
-          echo "Version ID: $VERSION_ID"
-
-          TAG=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/user/packages/container/test_n8n/versions/$VERSION_ID \
-            | jq -r '.metadata.container.tags[0]')
+          TAG="${{ github.event.registry_package.package_version.container_metadata.tag.name }}"
 
           echo "Tag trouvé: $TAG"
-
-          if [ "$TAG" = "null" ] || [ -z "$TAG" ]; then
-            echo "Aucun tag trouvé, arrêt."
-            exit 0
-          fi
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
 
       - name: Send webhook to n8n
-        if: steps.package.outputs.tag != ''
         run: |
           TAG="${{ steps.package.outputs.tag }}"
 
