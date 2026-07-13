@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event.registry_package.package_version.metadata.container.tags[0] != ''
     runs-on: self-hosted
 
     permissions:
@@ -30,6 +31,11 @@ jobs:
             | jq -r '.metadata.container.tags[0]')
 
           echo "Tag trouvé: $TAG"
+
+          if [ "$TAG" = "null" ] || [ -z "$TAG" ]; then
+            echo "Aucun tag trouvé, arrêt du déploiement."
+            exit 1
+          fi
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
