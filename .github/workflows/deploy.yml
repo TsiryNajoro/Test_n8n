@@ -1,4 +1,4 @@
-name: Trigger n8n Deployment
+name: Trigger n8n Deployment 22
 
 on:
   registry_package:
