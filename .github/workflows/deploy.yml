@@ -4,6 +4,10 @@ on:
   registry_package:
     types: [published]
 
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: self-hosted
@@ -21,13 +25,16 @@ jobs:
           echo "Version ID: $VERSION_ID"
 
           TAG=$(curl -s \
-          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          https://api.github.com/user/packages/container/test_n8n/versions/$VERSION_ID \
-          | jq -r '.metadata.container.tags[0]')
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/user/packages/container/test_n8n/versions/$VERSION_ID \
+            | jq -r '.metadata.container.tags[0]')
+
+          echo "Tag trouvé: $TAG"
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Trigger n8n deployment
+
+      - name: Send webhook to n8n
         run: |
           TAG="${{ steps.package.outputs.tag }}"
 
@@ -36,3 +43,5 @@ jobs:
           curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy \
             -H "Content-Type: application/json" \
             -d "{\"tag\":\"$TAG\"}"
+
+          echo "Webhook envoyé à n8n"
