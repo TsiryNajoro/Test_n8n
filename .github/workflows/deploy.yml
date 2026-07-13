@@ -1,0 +1,14 @@
+name: Trigger n8n Deployment
+
+on:
+  registry_package:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Debug package event
+        run: |
+          echo '${{ toJson(github.event) }}'
