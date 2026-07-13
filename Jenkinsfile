@@ -10,60 +10,50 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                docker build -t test_n8n:${BUILD_NUMBER} .
+                docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
                 '''
             }
         }
 
-
-        stage('Login GHCR') {
+        stage('Push Image') {
             steps {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'ghcr-token',
-                        usernameVariable: 'GHCR_USER',
-                        passwordVariable: 'GHCR_TOKEN'
+                        usernameVariable: 'GH_USER',
+                        passwordVariable: 'GH_TOKEN'
                     )
                 ]) {
-
                     sh '''
-                    echo $GHCR_TOKEN | docker login ghcr.io \
-                    -u $GHCR_USER \
-                    --password-stdin
-                    '''
+                    echo $GH_TOKEN | docker login ghcr.io -u $GH_USER --password-stdin
 
+                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    '''
                 }
             }
         }
 
-
-        stage('Tag Image') {
+        stage('Deploy Image') {
             steps {
                 sh '''
-                docker tag \
-                test_n8n:${BUILD_NUMBER} \
+                docker stop test_n8n || true
+                docker rm test_n8n || true
+
+                docker run -d \
+                --name test_n8n \
+                --restart unless-stopped \
+                -p 8080:80 \
                 ${IMAGE_NAME}:${BUILD_NUMBER}
                 '''
             }
         }
 
-
-        stage('Push Image') {
+        stage('Check Deployment') {
             steps {
                 sh '''
-                docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                docker ps | grep test_n8n
                 '''
             }
         }
-
-
-        stage('Check Image') {
-            steps {
-                sh '''
-                docker images | grep test_n8n
-                '''
-            }
-        }
-
     }
 }
