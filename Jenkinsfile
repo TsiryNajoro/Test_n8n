@@ -1,21 +1,23 @@
-pipeline {
-    agent any
+stage('Push Docker Image') {
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'ghcr-token',
+                usernameVariable: 'GH_USER',
+                passwordVariable: 'GH_TOKEN'
+            )
+        ]) {
+            sh '''
+            echo $GH_TOKEN | docker login ghcr.io \
+            -u $GH_USER \
+            --password-stdin
 
-    stages {
+            docker tag test_n8n:${BUILD_NUMBER} \
+            ghcr.io/tsirynajoro/test_n8n:${BUILD_NUMBER}
 
-        stage('Build Docker Image') {
-            steps {
-                sh '''
-                    docker build \
-                    -t test_n8n:${BUILD_NUMBER} .
-                '''
-            }
-        }
-
-        stage('Check Image') {
-            steps {
-                sh 'docker images | grep test_n8n'
-            }
+            docker push \
+            ghcr.io/tsirynajoro/test_n8n:${BUILD_NUMBER}
+            '''
         }
     }
 }
