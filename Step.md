@@ -6,7 +6,7 @@
     -v n8n_data:/home/node/.n8n \
     n8nio/n8n
 
-[Optionally] If the URL provided by grok changed :
+[Optionally] If the URL provided by ngrok changed :
 
     a - Run this and replace the URL if needed :
 
