@@ -6,10 +6,6 @@
     -v n8n_data:/home/node/.n8n \
     n8nio/n8n
 
-## 2 - Tunnel via 
-
-   - ngrok http 5678
-
 [Optionally] If the URL provided by grok changed :
 
     a - Run this and replace the URL if needed :
@@ -22,6 +18,10 @@
     n8nio/n8n
 
     b - curl -X POST https://nouvelle-url.ngrok-free.app/webhook/deploy
+
+## 2 - Tunnel via 
+
+   - ngrok http 5678
 
 ## 3 - Otherwise,
 

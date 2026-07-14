@@ -28,32 +28,12 @@ pipeline {
                     echo $GH_TOKEN | docker login ghcr.io -u $GH_USER --password-stdin
 
                     docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+
+                    docker logout ghcr.io
                     '''
                 }
             }
         }
 
-        stage('Deploy Image') {
-            steps {
-                sh '''
-                docker stop test_n8n || true
-                docker rm test_n8n || true
-
-                docker run -d \
-                --name test_n8n \
-                --restart unless-stopped \
-                -p 8080:80 \
-                ${IMAGE_NAME}:${BUILD_NUMBER}
-                '''
-            }
-        }
-
-        stage('Check Deployment') {
-            steps {
-                sh '''
-                docker ps | grep test_n8n
-                '''
-            }
-        }
     }
 }
