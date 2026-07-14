@@ -41,6 +41,16 @@ Run your application first :
 
 docker start test_n8n (your app name here)
 
+or in case the app container got deleted :
+
+docker run -d \
+  --name test_n8n \
+  --restart unless-stopped \
+  -p 8080:80 \
+  ghcr.io/tsirynajoro/test_n8n:23
+
+  
+
 git add . //Or what has been changed
 git commit -m "Your commit"
 git push
