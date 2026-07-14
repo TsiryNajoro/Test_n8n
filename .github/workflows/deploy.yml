@@ -21,6 +21,10 @@ jobs:
       - name: Debug payload
         run: echo '${{ toJSON(github.event.registry_package) }}'      
 
+      - name: Debug event
+        run: |
+          echo '${{ toJson(github.event) }}'
+
       - name: Get package version
         id: package
         run: |
