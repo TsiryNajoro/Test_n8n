@@ -9,9 +9,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-
   deploy:
-    if: true
 
     runs-on: self-hosted
 
@@ -20,22 +18,30 @@ jobs:
 
     steps:
 
-      - name: Debug event
-        run: |
-          echo '${{ toJson(github.event) }}'
-
       - name: Get package version
         id: package
         run: |
-          TAG="${{ github.event.registry_package.package_version.container_metadata.tag.name }}"
+
+          PACKAGE_URL="${{ github.event.registry_package.package_version.package_url }}"
+
+          echo "Package URL: $PACKAGE_URL"
+
+          TAG="${PACKAGE_URL##*:}"
 
           echo "Tag trouvé: $TAG"
+
+          if [ -z "$TAG" ]; then
+            echo "Pas de tag, on ignore"
+            exit 0
+          fi
 
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
 
       - name: Send webhook to n8n
+        if: steps.package.outputs.tag != ''
         run: |
+
           TAG="${{ steps.package.outputs.tag }}"
 
           echo "📦 Déploiement du tag : $TAG"
