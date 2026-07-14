@@ -35,7 +35,7 @@ jobs:
 
           echo "📦 Déploiement du tag : $TAG"
 
-          curl -X POST https://prescribe-whinny-species.ngrok-free.dev/webhook/deploy \
+          curl -X POST http://localhost:5678/webhook/deploy \
             -H "Content-Type: application/json" \
             -d "{\"tag\":\"$TAG\"}"
 
