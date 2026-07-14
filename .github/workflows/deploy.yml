@@ -11,10 +11,7 @@ concurrency:
 jobs:
 
   deploy:
-    if: |
-      github.event.registry_package.package_type == 'container' &&
-      github.event.registry_package.package_version.container_metadata.tag.name != '' &&
-      startsWith(github.event.registry_package.package_version.name, 'sha256:') == false
+    if: true
 
     runs-on: self-hosted
 
@@ -22,6 +19,10 @@ jobs:
       packages: read
 
     steps:
+
+      - name: Debug event
+        run: |
+          echo '${{ toJson(github.event) }}'
 
       - name: Get package version
         id: package
