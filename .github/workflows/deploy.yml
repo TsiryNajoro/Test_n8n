@@ -37,6 +37,11 @@ jobs:
 
           echo "📦 Déploiement du tag : $TAG"
 
+          if [ -z "$TAG" ]; then
+            echo "Pas de tag, on ignore"
+            exit 0
+          fi
+
           curl -X POST http://localhost:5678/webhook/deploy \
             -H "Content-Type: application/json" \
             -d "{\"tag\":\"$TAG\"}"
