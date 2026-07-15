@@ -1,8 +1,8 @@
 name: Trigger n8n Deployment
 
 on:
-  registry_package:
-    types: [published]
+  repository_dispatch:
+    types: [docker-image-published]
 
 concurrency:
   group: deploy
@@ -10,39 +10,12 @@ concurrency:
 
 jobs:
   deploy:
-
     runs-on: self-hosted
 
-    permissions:
-      packages: read
-
     steps:
-
-      - name: Get package version
-        id: package
-        run: |
-
-          PACKAGE_URL="${{ github.event.registry_package.package_version.package_url }}"
-
-          echo "Package URL: $PACKAGE_URL"
-
-          TAG="${PACKAGE_URL##*:}"
-
-          echo "Tag trouvé: $TAG"
-
-          if [ -z "$TAG" ]; then
-            echo "Pas de tag, on ignore"
-            exit 0
-          fi
-
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-
       - name: Send webhook to n8n
-        if: steps.package.outputs.tag != ''
         run: |
-
-          TAG="${{ steps.package.outputs.tag }}"
+          TAG="${{ github.event.client_payload.tag }}"
 
           echo "📦 Déploiement du tag : $TAG"
 
