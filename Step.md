@@ -6,6 +6,10 @@
     -v n8n_data:/home/node/.n8n \
     n8nio/n8n
 
+    or if the container already exist
+
+   - docker start n8n  
+
 [Optionally] If the URL provided by ngrok changed :
 
     a - Run this and replace the URL if needed :
@@ -19,9 +23,9 @@
 
     b - curl -X POST https://nouvelle-url.ngrok-free.app/webhook/deploy
 
-## 2 - Tunnel via 
+## 2 - Tunnel jenkins via 
 
-   - ngrok http 5678
+   - ngrok http 8081
 
 ## 3 - Otherwise,
 
