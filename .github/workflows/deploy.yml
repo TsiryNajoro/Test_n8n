@@ -1,8 +1,8 @@
 name: Trigger n8n Deployment
 
 on:
-  repository_dispatch:
-    types: [docker-image-published]
+  registry_package:
+    types: [published]
 
 concurrency:
   group: deploy
@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Send webhook to n8n
         run: |
-          TAG="${{ github.event.client_payload.tag }}"
+          TAG="${{ github.event.registry_package.package_version.container_metadata.tag.name }}"
 
           echo "📦 Déploiement du tag : $TAG"
 

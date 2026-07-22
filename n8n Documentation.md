@@ -1,325 +1,173 @@
-# CI/CD Pipeline Guide with Docker, Jenkins, GitHub Actions and n8n
-
-## Overview
-
-This guide describes the implementation of an automated CI/CD pipeline using Jenkins, GitHub Actions, Docker, and n8n.
-
-The pipeline automates the application lifecycle by separating:
-
-* **Continuous Integration (CI):** Building, testing, and publishing application artifacts.
-* **Continuous Deployment (CD):** Retrieving and deploying the generated artifacts.
-
-> This setup was created for demonstration purposes. Some components may differ in a production environment.
-
----
-
-# Architecture Overview
-
-```text
-Developer
-    |
-    | git push
-    ↓
-========================
- Continuous Integration
-========================
-    |
-    ↓
-Jenkins
-    |
-    | Build Docker image
-    | Push image
-    ↓
-Container Registry
-
-    |
-    ↓
-
-========================
- Continuous Deployment
-========================
-
-GitHub Actions
-    |
-    | Trigger deployment
-    ↓
-n8n
-    |
-    | Pull image
-    | Deploy application
-    ↓
-Running Application
-```
-
----
-
-# Continuous Integration (CI)
-
-## Jenkins
-
-Jenkins is responsible for automating the build process and generating the application artifact.
-
-Responsibilities:
-
-* Retrieve source code.
-* Build Docker image.
-* Tag image version.
-* Push image to container registry.
-* Trigger deployment workflow.
-
----
-
-## Jenkins Configuration
-
-### Required Plugins
-
-Install the following Jenkins plugins:
-
-GitHub Integration
-GitHub plugin
-GitHub API plugin
-
----
-
-### Credentials Configuration
-
-Jenkins requires credentials to access external services.
-
-Configure credentials for:
-
-* Source repository access.
-* Container registry authentication.
-* External API communication if required.
-
-Credential type:
-
-```
-[CREDENTIAL TYPE]
-```
-
-Credential identifier:
-
-```
-[CREDENTIAL ID]
-```
-
----
-
-### Pipeline Configuration
-
-Create a Jenkins pipeline connected to the application repository.
-
-Pipeline type:
-
-```
-[PIPELINE TYPE]
-```
-
-Repository:
-
-```
-[REPOSITORY URL]
-```
-
-Trigger configuration:
-
-```
-[TRIGGER CONFIGURATION]
-```
-
----
-
-### Jenkinsfile
-
-The pipeline logic is stored inside:
-
-```
-Jenkinsfile
-```
-
-Responsibilities handled by this file:
-
-* Checkout source code.
-* Build Docker image.
-* Tag image.
-* Push image.
-* Trigger deployment process.
-
-Jenkinsfile content:
-
-```groovy
-[INSERT JENKINSFILE HERE]
-```
-
--------------------------------------------------------------------------------------------------
-
-# Continuous Deployment (CD)
-
-## GitHub Actions
-
-GitHub Actions acts as the event handler between the CI and deployment phases.
-
-Responsibilities:
-
-* Receive deployment events.
-* Extract image information.
-* Send deployment request to n8n.
-
----
-
-## GitHub Actions Configuration
-
-Workflow files are stored inside:
-
-```
-.github/workflows/
-```
-
-Example:
-
-```
-.github/workflows/deploy.yml
-```
-
-The workflow is responsible for:
-
-* Listening to deployment events.
-* Running on the configured runner.
-* Sending deployment information to n8n.
-
-Workflow content:
-
-```yaml
-[INSERT GITHUB ACTION WORKFLOW HERE]
-```
-
----
-
-## Runner Configuration
-
-The workflow execution environment can use:
-
-* GitHub-hosted runners.
-* Self-hosted runners.
-
-Runner configuration:
-
-```
-[RUNNER CONFIGURATION DETAILS]
-```
-
----
-
-# n8n Deployment Automation
-
-n8n executes the deployment operations.
-
-Responsibilities:
-
-* Receive webhook requests.
-* Authenticate with required services.
-* Pull new application images.
-* Replace running containers.
-
----
-
-## n8n Workflow Configuration
-
-Workflow name:
-
-```
-[WORKFLOW NAME]
-```
-
-Required nodes:
-
-```
-Webhook
-    |
-Execute Command
-```
-
----
-
-## Webhook Node
-
-Purpose:
-
-Receives deployment requests from the CI/CD pipeline.
-
-Configuration:
-
-Endpoint path:
-
-```
-[WEBHOOK PATH]
-```
-
-Expected payload:
-
-```json
-{
-    "image": "[IMAGE NAME]",
-    "tag": "[IMAGE TAG]"
+### CI part :
+
+## Jenkins 
+
+- Plugin installation
+- Add the 2 required credentials:
+    A GitHub Personal Access Token (PAT) with the required repository and workflow permissions.
+    A GitHub Container Registry (GHCR) authentication token with the read:packages and write:packages scopes. Note their IDs for future use (github-pat and ghcr-token in this context).
+- create the pipeline
+- Enable the trigger: GitHub hook trigger for GITScm polling
+- Configure the pipeline source as: Pipeline script from SCM (Git)
+- Set the repository URL
+- Apply and save
+
+## Application side
+
+- Make sure there's a Jenkinsfile with this following content on the root of the repository :
+----------------------------------------------------------------------------------
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "ghcr.io/YOUR_GITHUB_ORG/YOUR_IMAGE_NAME"
+        GITHUB_REPO = "GITHUB_NAME/REPO_NAME"
+    }
+
+    stages {
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                '''
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'ghcr-token',
+                        usernameVariable: 'GH_USER',
+                        passwordVariable: 'GH_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                    echo $GH_TOKEN | docker login ghcr.io -u $GH_USER --password-stdin
+
+                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+
+                    docker logout ghcr.io
+                    '''
+                }
+            }
+        }
+
+        stage('Trigger GitHub Actions') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'github-pat', variable: 'GH_PAT')
+                ]) {
+                    sh '''
+                    curl -X POST \
+                      -H "Authorization: token ${GH_PAT}" \
+                      -H "Accept: application/vnd.github+json" \
+                      https://api.github.com/repos/${GITHUB_REPO}/dispatches \
+                      -d "{\\"event_type\\":\\"docker-image-published\\",\\"client_payload\\":{\\"tag\\":\\"${BUILD_NUMBER}\\"}}"
+                    '''
+                }
+            }
+        }
+
+    }
 }
-```
+---------------------------------------------------------------------------------
+In summary, this part describes the automation of the code-to-image lifecycle, from application source code changes to Docker image creation and publication on GHCR.
 
----
 
-## Deployment Command Node
+The CI pipeline ends when the Docker image is successfully published to GHCR. The CD pipeline starts from this artifact and is responsible for deploying the corresponding version on the target environment.
 
-Purpose:
+### CI/CD handover
 
-Executes deployment operations on the target server.
+Once the Docker image is built and pushed to GHCR, the CI part is considered completed.
 
-Responsibilities:
+The communication between CI and CD is done using a repository_dispatch event.
 
-* Authenticate with registry.
-* Pull new image.
-* Stop previous container.
-* Start updated container.
+Instead of relying on GitHub native package events (registry_package), Jenkins explicitly triggers the GitHub Actions workflow through the GitHub API and sends the image tag as a parameter.
 
-Command:
+The workflow trigger mechanism must be clearly communicated between both teams to avoid integration issues.
 
-```bash
-[INSERT DEPLOYMENT SCRIPT HERE]
-```
 
----
+### CD part :
 
-# Security Considerations
+## n8n 
+- Add a new credential using an SSH key previously created on the target server, and make sure the connectivity test success before saving it
+- Create a new workflow, add two nodes: Webhook and Execute Command., and link them together
+    # on the Webhook node :
+     - fill the path with one of your choice, and leave the remaining as they are
+     - Save the Production URL, as it will be used later by the deployment pipeline.
+    # on the execute a command node :
+     - Open it, and add the SSH key previously added on the credential input
+     - In the command section, use a simple command such as docker version to verify SSH connectivity between n8n and the target server.
+     - Execute the webhook and make a curl POST method on the test URL from a console 
+     - if the test succeeds, fill your deployment script in the command section
+     - publish the workflow
 
-Recommended improvements for production environments:
+     Notice : Store sensitive variables in n8n credentials or environment variables for security purposes. IMAGE_NAME, CONTAINER_NAME, HOST_PORT, CONTAINER_PORT, GHCR_USER and GHCR_TOKEN
 
-* Store secrets using dedicated secret management solutions.
-* Avoid hardcoded credentials.
-* Implement vulnerability scanning before deployment.
-* Scan Docker images before publishing.
-* Secure webhook endpoints.
-* Use HTTPS communication.
-* Implement access control on deployment servers.
+The deployment script :
+---------------------------------------------------------------------------------
 
----
+#!/bin/bash
 
-# Deployment Flow Summary
+TAG="{{ $json.body.tag }}"
+FULL_IMAGE="$IMAGE_NAME:$TAG"
 
-1. Developer pushes code.
-2. Jenkins builds and publishes a Docker image.
-3. GitHub Actions receives the deployment trigger.
-4. GitHub Actions sends deployment information to n8n.
-5. n8n deploys the new application version.
+echo "Image deployment : $FULL_IMAGE"
 
----
+cd [the correct directory on the server ] || exit 1
 
-# Additional Documentation
+echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
-Detailed implementation steps:
+docker pull "$FULL_IMAGE"
 
-* Appendix A — Jenkins installation.
-* Appendix B — Jenkinsfile explanation.
-* Appendix C — GitHub Actions workflow details.
-* Appendix D — n8n workflow configuration.
-* Appendix E — Docker commands and deployment scripts.
+if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+    docker stop "$CONTAINER_NAME"
+    docker rm "$CONTAINER_NAME"
+fi
 
-```
-```
+docker run -d \
+    --name "$CONTAINER_NAME" \
+    -p "$HOST_PORT:$CONTAINER_PORT" \
+    "$FULL_IMAGE"
+
+echo "Deployment sucessful! Image: $FULL_IMAGE"
+---------------------------------------------------------------------------------
+
+
+
+## On the repository 
+
+- Create a deployment workflow file inside the .github/workflows directory. The purpose of this workflow is to notify n8n that a new image is available and provide the image tag required for deployment.
+
+deploy.yml : 
+---------------------------------------------------------------------------------
+name: Trigger n8n Deployment
+
+on:
+  repository_dispatch:
+    types: [docker-image-published]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Send webhook to n8n
+        run: |
+          TAG="${{ github.event.client_payload.tag }}"
+
+          echo "tag deployment: $TAG"
+
+          curl -X POST [n8n webhook Production URL]\
+            -H "Content-Type: application/json" \
+            -d "{\"tag\":\"$TAG\"}"
+
+          echo "Webhook envoyé à n8n"
+---------------------------------------------------------------------------------
+Note: The runner type may vary depending on the infrastructure architecture and network connectivity requirements.
