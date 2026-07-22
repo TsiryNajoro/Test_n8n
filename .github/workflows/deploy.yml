@@ -10,7 +10,10 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event.registry_package.package_version.container_metadata.tag.name != ''
+    # Ensures the event is a container and specifically filters out the digest-only trigger
+    if: |
+      github.event.registry_package.package_type == 'container' && 
+      github.event.registry_package.package_version.container_metadata.tag.name != null
     runs-on: self-hosted
 
     steps:
