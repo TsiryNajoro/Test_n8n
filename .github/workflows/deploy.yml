@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event.registry_package.package_version.container_metadata.tag.name != ''
     runs-on: self-hosted
 
     steps:
