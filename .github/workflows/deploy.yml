@@ -18,10 +18,10 @@ jobs:
         run: |
           TAG="${{ github.event.registry_package.package_version.container_metadata.tag.name }}"
 
-          echo "📦 Déploiement du tag : $TAG"
+          echo " Deployment of the tag : $TAG"
 
           curl -X POST http://localhost:5678/webhook/deploy \
             -H "Content-Type: application/json" \
             -d "{\"tag\":\"$TAG\"}"
 
-          echo "Webhook envoyé à n8n"
+          echo "Webhook sent to n8n"
